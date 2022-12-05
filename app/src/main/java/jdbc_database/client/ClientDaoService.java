@@ -40,7 +40,7 @@ public class ClientDaoService {
         this.selectMaxId = connection.prepareStatement("SELECT max(id) AS maxId FROM client");
     }
 
-    public long create(String name) throws SQLException {
+    public long create(String name) {
 
         if (name.length() <= 2) {
             throw new IllegalArgumentException("Name is short!");
@@ -49,38 +49,43 @@ public class ClientDaoService {
             throw new IllegalArgumentException("Name is long!");
         }
 
-        this.createClientSt.setString(1, name);
-        this.createClientSt.executeUpdate();
+        long id = 0;
+        try {
+            this.createClientSt.setString(1, name);
+            this.createClientSt.executeUpdate();
 
-        long id;
-        try (ResultSet rs = this.selectMaxId.executeQuery();) {
-            rs.next();
-            id = rs.getLong("maxId");
+            try (ResultSet rs = this.createClientSt.getGeneratedKeys()) {
+                rs.next();
+                id = rs.getLong("id");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return id;
     }
 
-    public String getById(long id) throws SQLException {
+    public String getById(long id) {
+        String result = "";
+        try {
+            this.getByIdSt.setLong(1, id);
+            try (ResultSet rs = this.getByIdSt.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
 
-        this.getByIdSt.setLong(1, id);
-        String result;
-
-        try (ResultSet rs = this.getByIdSt.executeQuery()) {
-            if (!rs.next()) {
-                return null;
+                Client client = new Client();
+                client.setId(id);
+                client.setName(rs.getString("name"));
+                result = client.getName();
             }
-
-            Client client = new Client();
-            client.setId(id);
-            client.setName(rs.getString("name"));
-            result = client.getName();
-            return result;
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+
+        return result;
     }
 
-    public void setName(long id, String name) throws SQLException {
-
+    public void setName(long id, String name) {
         if (name.length() <= 2) {
             throw new IllegalArgumentException("Name is short!");
         }
@@ -88,17 +93,25 @@ public class ClientDaoService {
             throw new IllegalArgumentException("Name is long!");
         }
 
-        this.setNameSt.setLong(1, id);
-        this.setNameSt.setString(2, name);
-        this.setNameSt.executeUpdate();
+        try {
+            this.setNameSt.setLong(1, id);
+            this.setNameSt.setString(2, name);
+            this.setNameSt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void deleteById(long id) throws SQLException {
-        this.deleteByIdSt.setLong(1, id);
-        this.deleteByIdSt.executeUpdate();
+    public void deleteById(long id) {
+        try {
+            this.deleteByIdSt.setLong(1, id);
+            this.deleteByIdSt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public List<Client> listAll() throws SQLException {
+    public List<Client> listAll() {
         List<Client> clients = new ArrayList<>();
 
         try (ResultSet rs = this.listAllSt.executeQuery()) {
@@ -108,8 +121,9 @@ public class ClientDaoService {
                 client.setName(rs.getString("name"));
                 clients.add(client);
             }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
-
         return clients;
     }
 }
